@@ -1,6 +1,6 @@
 {
-  "name": "obj-validator",
-  "version": "1.0.0",
+  "name": "@cdl/obj-tools",
+  "version": "0.0.1",
   "description": "see README.md",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
