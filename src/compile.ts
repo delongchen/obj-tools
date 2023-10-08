@@ -1,30 +1,37 @@
-import {RuleHandler, RuleTemplate, RuleTree, Validator} from "./types";
+import {InstanceContext, RuleListType, RuleTemplate, RuleTree, Validator} from "./types";
+import {parseRuleList} from "./comm";
 
-type HandlerMap = Map<string, RuleHandler<any>>
 
-export const fromStr = (ruleStr: string, handlerMap: HandlerMap): Validator<unknown> => {
-  const ruleStrList = ruleStr.split('&')
-  if (ruleStrList.length === 0) {
+export const compileSignal = (signalRule: string | RuleListType, ctx: InstanceContext, key?: string) => {
+  const { handlerMap } = ctx
+
+  if (typeof signalRule === 'string') {
+    signalRule = parseRuleList(signalRule, '&', '=')
+  }
+
+  if (signalRule.length === 0) {
     return () => true
   }
 
   const validatorList: Validator<unknown>[] = []
   const existValidatorSet = new Set<string>()
 
-  for (const ruleRaw of ruleStrList) {
-    const [handlerName, arg] = ruleRaw.split('=')
-    if (handlerName !== undefined && handlerName !== '') {
-      const handler = handlerMap.get(handlerName.trim())
-      if (handler !== undefined && !existValidatorSet.has(handlerName)) {
-        validatorList.push(handler.generator(arg?.trim() ?? ''))
-        existValidatorSet.add(handlerName)
-      }
+  for (const rule of signalRule) {
+    const [handlerName, arg] = rule
+    const handler = handlerMap.get(handlerName.trim())
+    if (handler !== undefined && !existValidatorSet.has(handlerName)) {
+      validatorList.push(handler.genValidator(arg, ctx))
+      existValidatorSet.add(handlerName)
     }
   }
 
-  return (value, ctx) => {
+  const validateContext = {
+    key: key ?? ''
+  }
+
+  return (value: unknown) => {
     for (const validator of validatorList) {
-      if (!validator(value, ctx)) {
+      if (!validator(value, validateContext)) {
         return false
       }
     }
@@ -32,14 +39,16 @@ export const fromStr = (ruleStr: string, handlerMap: HandlerMap): Validator<unkn
   }
 }
 
-export const fromObj = (template: RuleTemplate, handlerMap: HandlerMap): RuleTree => {
+export const compile = (template: RuleTemplate, ctx: InstanceContext, keyPath: string[]): RuleTree => {
   const ruleTree: RuleTree = {}
   for (const [key, value] of Object.entries(template)) {
+    keyPath.push(key)
     if (typeof value === 'string') {
-      ruleTree[key] = fromStr(value, handlerMap)
+      ruleTree[key] = compileSignal(value, ctx, keyPath.join('.'))
     } else {
-      ruleTree[key] = fromObj(value, handlerMap)
+      ruleTree[key] = compile(value, ctx, keyPath)
     }
+    keyPath.pop()
   }
   return ruleTree
 }

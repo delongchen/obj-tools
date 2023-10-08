@@ -1,10 +1,10 @@
 import {RuleHandler} from "../../types";
 
-const isStr: RuleHandler<unknown> = {
+const handleIsStr: RuleHandler<unknown> = {
   name: 'string',
-  generator: () => (value: unknown) => typeof value === 'string'
+  genValidator: () => (value: unknown) => typeof value === 'string'
 }
 
 export const strHandlers: RuleHandler<any>[] = [
-  isStr
+  handleIsStr
 ]

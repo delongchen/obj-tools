@@ -62,7 +62,11 @@ const getValueLen = (value: unknown): number | undefined => {
 
 export const handleLen: RuleHandler<unknown> = {
   name: 'len',
-  generator: (arg: string) => {
+  genValidator: (arg) => {
+    if (typeof arg !== 'string') {
+      return OK
+    }
+
     const scope = getScope(arg)
 
     // scope is invalid, skip this handler
